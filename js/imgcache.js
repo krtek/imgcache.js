@@ -128,10 +128,7 @@ var ImgCache = {
 					Private.setCurrentSize(ImgCache.getCurrentSize() + parseInt(metadata.size));
 				});
 						
-				Helpers.logging('Download complete: ' + Helpers.EntryGetPath(entry), LOG_LEVEL_INFO);
-				Helpers.logging('Download complete: ' + entry.toURL());
-
-
+				Helpers.logging('Download complete: ' + Helpers.EntryGetPath(entry), LOG_LEVEL_INFO);				
 
 				// iOS: the file should not be backed up in iCloud
 				// new from cordova 1.8 only
