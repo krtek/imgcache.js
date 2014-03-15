@@ -117,7 +117,7 @@ var ImgCache = {
 
 		img_src = Helpers.sanitizeURI(img_src);
 			
-		var filePath = Private.getCachedFilePath(img_src, Helpers.EntryGetPath(ImgCache.attributes.dirEntry));
+		var filePath = Helpers.EntryGetPath(ImgCache.attributes.dirEntry) + '/' + Private.getCachedFileName(img_src);
 
 		var fileTransfer = new Private.FileTransferWrapper(ImgCache.attributes.filesystem);
 		fileTransfer.download(
@@ -129,6 +129,9 @@ var ImgCache = {
 				});
 						
 				Helpers.logging('Download complete: ' + Helpers.EntryGetPath(entry), LOG_LEVEL_INFO);
+				Helpers.logging('Download complete: ' + entry.toURL());
+
+
 
 				// iOS: the file should not be backed up in iCloud
 				// new from cordova 1.8 only
@@ -168,16 +171,7 @@ var ImgCache = {
 
 		img_src = Helpers.sanitizeURI(img_src);
 			
-		var path = Private.getCachedFilePath(img_src, Helpers.EntryGetPath(ImgCache.attributes.dirEntry));
-		if (Private.isCordovaAndroid()) {
-			if (path.indexOf('file://') == 0) {
-				// issue #4 -- android cordova specific
-				path = path.substr(7);
-			} else if (path.indexOf('cdvfile://') == 0) {
-				// issue #38 -- android cordova specific
-				path = path.substr(10);
-			}
-		}
+		var path = Private.getCachedFilePath(img_src);
 		var ret = function(exists) {
 			response_callback(img_src, exists);
 		};
@@ -375,16 +369,19 @@ var ImgCache = {
 	};
 	
 	// if no local_root set, set relative path
-	Private.getCachedFilePath = function(img_src, local_root) {
+	Private.getCachedFilePath = function(img_src) {
+		return ImgCache.options.localCacheFolder + '/' + Private.getCachedFileName(img_src);
+	};
+
+    Private.getCachedFileName = function(img_src) {
 		if (!img_src) {
 			Helpers.logging('No source given to getCachedFilePath', LOG_LEVEL_WARNING);
 			return;
 		}
 		var hash= Helpers.SHA1(img_src);
 		var ext = Helpers.FileGetExtension(Helpers.URIGetFileName(img_src));
-		var filename = hash + (ext ? ('.' + ext) : '');
-		return (local_root ? local_root + '/' : '') + filename;
-	};
+		return hash + (ext ? ('.' + ext) : '');
+    }
 
 	Private.setNewImgPath = function($img, new_src, old_src) {
 		DomHelpers.setAttribute($img, 'src', new_src);
@@ -544,7 +541,7 @@ var ImgCache = {
 			Helpers.logging('File ' + filename + ' not in cache', LOG_LEVEL_INFO);
 			if (fail_callback) fail_callback($element);
 		};
-		ImgCache.attributes.dirEntry.getFile(filePath, { create: false }, _gotFileEntry, _fail);
+        ImgCache.attributes.filesystem.root.getFile(Private.getCachedFilePath(img_src), {create: false}, _gotFileEntry, _fail);
 	};
 	
 	/****************************************************************************/
@@ -628,8 +625,11 @@ var ImgCache = {
 	};
 	
 	Helpers.EntryGetPath = function(entry) {
-		// From Cordova 3.3 onward toURL() seems to be required instead of fullPath (#38)
-		return (entry.hasOwnProperty('toURL') ? entry.toURL() : entry.fullPath);
+        if (Private.isCordova()) {
+		    return (typeof entry.toURL == 'function' ? entry.toURL() : entry.fullPath);
+        } else {
+            return entry.fullPath;
+        }
 	}
 
 	/***********************************************
